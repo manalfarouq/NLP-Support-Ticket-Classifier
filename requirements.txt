@@ -1,0 +1,113 @@
+# Core Data Science
+# ============================================
+numpy 
+pandas 
+scipy 
+scikit-learn 
+
+# NLP & Text Processing
+# ============================================
+# NLTK for basic NLP
+nltk 
+
+# SpaCy for advanced NLP (optional)
+spacy 
+
+# Text preprocessing
+regex
+unidecode 
+
+# Hugging Face Ecosystem
+# ============================================
+# Transformers for embeddings
+transformers 
+sentence-transformers 
+tokenizers 
+
+# Hugging Face Hub
+huggingface-hub
+
+# Torch (backend for transformers)
+torch 
+torchvision 
+
+# Vector Database
+# ============================================
+chromadb 
+chromadb-client 
+
+# ML Monitoring & Drift Detection
+# ============================================
+evidently 
+
+
+# Infrastructure Monitoring
+# ============================================
+prometheus-client 
+prometheus-flask-exporter 
+
+
+# Kubernetes & Docker
+# ============================================
+kubernetes 
+docker 
+
+
+# Configuration & Environment
+# ============================================
+python-dotenv 
+pyyaml 
+python-json-logger 
+
+
+# Data Visualization
+# ============================================
+matplotlib 
+seaborn 
+plotly 
+
+
+# Jupyter & Notebooks
+# ============================================
+jupyter 
+jupyterlab 
+notebook 
+ipywidgets 
+
+
+# Testing & Quality
+# ============================================
+pytest 
+pytest-cov 
+pytest-mock 
+black 
+flake8 
+mypy 
+
+
+# Utilities
+# ============================================
+tqdm 
+joblib 
+requests 
+python-dateutil 
+
+
+# Logging & Debugging
+# ============================================
+loguru 
+colorlog 
+
+
+# Data Storage & Serialization
+# ============================================
+pyarrow 
+fastparquet 
+h5py 
+
+
+# API & Web 
+# ============================================
+fastapi 
+uvicorn 
+pydantic 

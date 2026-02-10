@@ -1,0 +1,219 @@
+venv/
+.venv/
+.history/
+# ============================================
+# Python
+# ============================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# ============================================
+# Data & Models (fichiers volumineux)
+# ============================================
+# Données brutes et traitées
+data/raw/*.csv
+data/raw/*.json
+data/raw/*.parquet
+data/processed/
+data/embeddings/
+*.npy
+*.npz
+
+# Modèles entraînés
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.pth
+models/*.ckpt
+models/*.bin
+*.model
+
+# ChromaDB
+chroma_db/
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================
+# Jupyter Notebooks
+# ============================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+*-checkpoint.ipynb
+
+# ============================================
+# ML & Monitoring
+# ============================================
+# Evidently reports
+monitoring/evidently/reports/*.html
+monitoring/evidently/reports/*.json
+*.evidently
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Logs
+logs/
+*.log
+*.out
+*.err
+
+# Metrics & artifacts
+outputs/
+experiments/
+checkpoints/
+
+# ============================================
+# Configuration & Secrets
+# ============================================
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.crt
+credentials.yaml
+config/secrets.yaml
+
+# API keys
+.api_keys
+apikeys.json
+
+# ============================================
+# Docker & Kubernetes
+# ============================================
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Kubernetes secrets (local)
+kubernetes/secrets/*.yaml
+!kubernetes/secrets/secrets-template.yaml
+
+# ============================================
+# IDE & Editors
+# ============================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ============================================
+# OS
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# ============================================
+# Testing & Coverage
+# ============================================
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ============================================
+# Monitoring (local)
+# ============================================
+# Prometheus data
+prometheus/data/
+
+# Grafana data
+grafana/data/
+grafana/logs/
+
+# cAdvisor
+cadvisor/
+
+# ============================================
+# Temporary files
+# ============================================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+tmp/
+temp/
+
+# Cache
+.cache/
+*.cache
+
+# ============================================
+# Documentation builds
+# ============================================
+docs/_build/
+docs/.doctrees/
+site/
+
+# ============================================
+# Hugging Face cache
+# ============================================
+.huggingface/
+transformers_cache/
