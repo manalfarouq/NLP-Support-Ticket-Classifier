@@ -111,3 +111,4 @@ h5py
 fastapi 
 uvicorn 
 pydantic 
+pydantic_settings
