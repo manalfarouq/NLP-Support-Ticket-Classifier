@@ -34,7 +34,6 @@ torchvision
 # Vector Database
 # ============================================
 chromadb 
-chromadb-client 
 
 # ML Monitoring & Drift Detection
 # ============================================
@@ -112,3 +111,6 @@ fastapi
 uvicorn 
 pydantic 
 pydantic_settings
+sentence-transformers
+scikit-learn 
+tqdm

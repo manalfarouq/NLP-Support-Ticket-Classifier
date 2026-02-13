@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     REPORTS_PATH: str = "src/monitoring/reports"
     
     # Configuration Hugging Face
-    HF_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
+    HF_MODEL_NAME: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_DIMENSION: int = 384
     
     # Echantillonnage
