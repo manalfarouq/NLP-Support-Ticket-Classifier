@@ -1,6 +1,6 @@
 {
   "model": "RandomForest",
-  "accuracy": 0.743,
-  "logistic_regression_score": 0.742,
-  "random_forest_score": 0.743
+  "accuracy": 0.772,
+  "logistic_regression_score": 0.748,
+  "random_forest_score": 0.772
 }

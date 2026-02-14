@@ -39,7 +39,7 @@ def main():
     print("\n" + "#"*60)
     print("# PIPELINE TERMINE AVEC SUCCES!")
     print("#"*60)
-    print("\nConsulte les rapports dans src/monitoring/reports/")
+    print("\nConsulte les rapports dans reports/evidently/")
 
 if __name__ == "__main__":
     main()

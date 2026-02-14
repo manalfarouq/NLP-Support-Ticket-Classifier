@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = 384
     
     # Echantillonnage
-    SAMPLE_SIZE: int = 10000
+    SAMPLE_SIZE: int = 20000
     
     # Configuration de la classification
     RANDOM_STATE: int = 42
