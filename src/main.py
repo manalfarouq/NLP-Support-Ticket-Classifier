@@ -28,7 +28,7 @@ def main():
     steps = [
         (Path("src/preprocessing/preprocess.py"), "1. PREPROCESSING"),
         (Path("src/embeddings/generate_embeddings.py"), "2. EMBEDDINGS"),
-        (Path("src/embeddings/store_chromadb.py"), "3. CHROMADB"),
+        (Path("src/embeddings/index_chromadb.py"), "3. CHROMADB"),
         (Path("src/models/train_classifier.py"), "4. CLASSIFICATION"),
         (Path("src/monitoring/evidently_monitoring.py"), "5. MONITORING")
     ]
