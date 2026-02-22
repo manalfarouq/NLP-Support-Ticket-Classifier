@@ -1,6 +1,5 @@
 """
-MONITORING ML - VERSION SIMPLE (SANS EVIDENTLY)
-Fonctionne avec n'importe quelle version
+MONITORING ML - AVEC EVIDENTLY AI
 """
 
 import pandas as pd
@@ -9,262 +8,175 @@ import sys
 from pathlib import Path
 import joblib
 import json
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-import matplotlib.pyplot as plt
-import seaborn as sns
+from datetime import datetime
 
 sys.path.append('.')
 from config.config import settings
 
+from evidently import DataDefinition, Dataset, MulticlassClassification, Report
+from evidently.presets import ClassificationPreset, DataDriftPreset
+from sklearn.metrics import accuracy_score, classification_report
+
 print("="*60)
-print("MONITORING ML - VERSION SIMPLE")
+print("MONITORING ML - EVIDENTLY AI")
 print("="*60)
 
 # ==========================================
 # 1. CHARGER LES DONNÉES
 # ==========================================
 print("\n1. Chargement des données...")
-
-# Chemins
-embeddings_file = Path(settings.DATA_EMBEDDINGS_PATH) / 'embeddings.npy'
-data_file = Path(settings.DATA_EMBEDDINGS_PATH) / 'data_sample.csv'
-model_file = Path(settings.MODELS_PATH) / 'classifier' / 'model.pkl'
-encoder_file = Path(settings.MODELS_PATH) / 'classifier' / 'label_encoder.pkl'
-
-# Charger
-X = np.load(embeddings_file)
-df = pd.read_csv(data_file)
-model = joblib.load(model_file)
-label_encoder = joblib.load(encoder_file)
-
+X             = np.load(Path(settings.DATA_EMBEDDINGS_PATH) / 'embeddings.npy')
+df            = pd.read_csv(Path(settings.DATA_EMBEDDINGS_PATH) / 'data_sample.csv')
+model         = joblib.load(Path(settings.MODELS_PATH) / 'classifier' / 'model.pkl')
+label_encoder = joblib.load(Path(settings.MODELS_PATH) / 'classifier' / 'label_encoder.pkl')
 print(f"   ✓ {len(X)} tickets chargés")
 
 # ==========================================
-# 2. GÉNÉRER LES PRÉDICTIONS
+# 2. PRÉDICTIONS
 # ==========================================
 print("\n2. Génération des prédictions...")
-
-y_pred = model.predict(X)
+y_pred        = model.predict(X)
 y_pred_labels = label_encoder.inverse_transform(y_pred)
-df['prediction'] = y_pred_labels
-
-print(f"   ✓ Prédictions générées")
-
-# ==========================================
-# 3. SÉPARER EN 2 PÉRIODES
-# ==========================================
-print("\n3. Simulation de drift (70% référence / 30% actuel)...")
-
-# Reference (70%) vs Current (30%)
-split = int(len(df) * 0.7)
-reference_df = df.iloc[:split].copy()
-current_df = df.iloc[split:].copy()
-
-print(f"   ✓ Reference : {len(reference_df)} tickets")
-print(f"   ✓ Current   : {len(current_df)} tickets")
+df['target']      = df['type']
+df['prediction']  = y_pred_labels
+df['text_length'] = df['processed_text'].astype(str).apply(len)
+print("   ✓ Prédictions ajoutées")
 
 # ==========================================
-# 4. MÉTRIQUES REFERENCE
+# 3. SPLIT 70/30
 # ==========================================
-print("\n4. Analyse de la période de référence...")
+print("\n3. Séparation référence / actuel...")
+split        = int(len(df) * 0.7)
+reference_df = df.iloc[:split].copy().reset_index(drop=True)
+current_df   = df.iloc[split:].copy().reset_index(drop=True)
+print(f"   ✓ Référence : {len(reference_df)} tickets")
+print(f"   ✓ Actuel    : {len(current_df)} tickets")
 
-ref_acc = accuracy_score(
-    label_encoder.transform(reference_df['type']),
-    label_encoder.transform(reference_df['prediction'])
+# ==========================================
+# 4. LANCER EVIDENTLY (calcul)
+# ==========================================
+print("\n4. Exécution Evidently AI...")
+cols = ['target', 'prediction', 'text_length']
+data_definition = DataDefinition(
+    classification=[MulticlassClassification(target='target', prediction_labels='prediction')]
 )
+ref_dataset = Dataset.from_pandas(reference_df[cols], data_definition=data_definition)
+cur_dataset = Dataset.from_pandas(current_df[cols],   data_definition=data_definition)
 
-print(f"\n   Accuracy : {ref_acc:.1%}")
-
-# Distribution
-print("\n   Distribution des classes :")
-for cls in label_encoder.classes_:
-    count = (reference_df['type'] == cls).sum()
-    pct = (count / len(reference_df)) * 100
-    print(f"   {cls:12s} : {count:5d} ({pct:5.1f}%)")
+report = Report([ClassificationPreset(), DataDriftPreset()])
+report.run(reference_data=ref_dataset, current_data=cur_dataset)
+print("   ✓ Rapport Evidently généré")
 
 # ==========================================
-# 5. MÉTRIQUES CURRENT
+# 5. CALCULER LES MÉTRIQUES MANUELLEMENT
 # ==========================================
-print("\n5. Analyse de la période actuelle...")
+classes = list(label_encoder.classes_)
 
-curr_acc = accuracy_score(
-    label_encoder.transform(current_df['type']),
-    label_encoder.transform(current_df['prediction'])
-)
+ref_acc  = accuracy_score(reference_df['target'], reference_df['prediction'])
+curr_acc = accuracy_score(current_df['target'],   current_df['prediction'])
+diff     = curr_acc - ref_acc
+status   = "STABLE ✅" if abs(diff) < 0.05 else "DRIFT DÉTECTÉ ⚠️"
 
-print(f"\n   Accuracy : {curr_acc:.1%}")
+ref_report  = classification_report(reference_df['target'], reference_df['prediction'], output_dict=True)
+curr_report = classification_report(current_df['target'],   current_df['prediction'],   output_dict=True)
 
-# Distribution
-print("\n   Distribution des classes :")
-for cls in label_encoder.classes_:
-    count = (current_df['type'] == cls).sum()
-    pct = (count / len(current_df)) * 100
-    print(f"   {cls:12s} : {count:5d} ({pct:5.1f}%)")
+def dist(dataframe):
+    return {cls: int((dataframe['target'] == cls).sum()) for cls in classes}
 
-# ==========================================
-# 6. COMPARAISON
-# ==========================================
-print("\n6. Comparaison et détection de drift...")
-
-diff = curr_acc - ref_acc
-print(f"\n   Différence d'accuracy : {diff:+.1%}")
-
-if abs(diff) < 0.05:
-    print(f"   ✅ Modèle stable (variation < 5%)")
-    drift_status = "STABLE"
-else:
-    print(f"   ⚠️ Drift détecté (variation > 5%)")
-    drift_status = "DRIFT DETECTE"
+ref_dist  = dist(reference_df)
+curr_dist = dist(current_df)
 
 # ==========================================
-# 7. RAPPORT TEXTE
+# 6. GÉNÉRER LE HTML
 # ==========================================
-print("\n7. Génération du rapport...")
+print("\n5. Génération du rapport HTML...")
 
-# Créer le dossier
 reports_dir = Path(settings.REPORTS_PATH) / 'evidently'
 reports_dir.mkdir(parents=True, exist_ok=True)
 
-# Rapport texte
-rapport_path = reports_dir / 'monitoring_report.txt'
-with open(rapport_path, 'w') as f:
-    f.write("="*60 + "\n")
-    f.write("RAPPORT DE MONITORING ML\n")
-    f.write("="*60 + "\n\n")
-    
-    f.write("PÉRIODE DE RÉFÉRENCE\n")
-    f.write("-"*60 + "\n")
-    f.write(f"Nombre de tickets : {len(reference_df)}\n")
-    f.write(f"Accuracy : {ref_acc:.2%}\n\n")
-    
-    f.write("Distribution des classes :\n")
-    for cls in label_encoder.classes_:
-        count = (reference_df['type'] == cls).sum()
-        pct = (count / len(reference_df)) * 100
-        f.write(f"  {cls:12s} : {count:5d} ({pct:5.1f}%)\n")
-    
-    f.write("\n" + "="*60 + "\n\n")
-    
-    f.write("PÉRIODE ACTUELLE\n")
-    f.write("-"*60 + "\n")
-    f.write(f"Nombre de tickets : {len(current_df)}\n")
-    f.write(f"Accuracy : {curr_acc:.2%}\n\n")
-    
-    f.write("Distribution des classes :\n")
-    for cls in label_encoder.classes_:
-        count = (current_df['type'] == cls).sum()
-        pct = (count / len(current_df)) * 100
-        f.write(f"  {cls:12s} : {count:5d} ({pct:5.1f}%)\n")
-    
-    f.write("\n" + "="*60 + "\n\n")
-    
-    f.write("ANALYSE DE DRIFT\n")
-    f.write("-"*60 + "\n")
-    f.write(f"Différence d'accuracy : {diff:+.2%}\n")
-    f.write(f"Statut : {drift_status}\n")
+def pct(n, total): return f"{n/total*100:.1f}%"
 
-print(f"   ✓ Rapport texte : {rapport_path}")
+rows_ref  = "".join(f"<tr><td>{c}</td><td>{ref_dist[c]}</td><td>{pct(ref_dist[c],len(reference_df))}</td><td>{ref_report[c]['precision']:.2f}</td><td>{ref_report[c]['recall']:.2f}</td><td>{ref_report[c]['f1-score']:.2f}</td></tr>" for c in classes)
+rows_curr = "".join(f"<tr><td>{c}</td><td>{curr_dist[c]}</td><td>{pct(curr_dist[c],len(current_df))}</td><td>{curr_report[c]['precision']:.2f}</td><td>{curr_report[c]['recall']:.2f}</td><td>{curr_report[c]['f1-score']:.2f}</td></tr>" for c in classes)
 
-# ==========================================
-# 8. GRAPHIQUE COMPARATIF
-# ==========================================
-print("\n8. Génération du graphique...")
+drift_color = "#27ae60" if abs(diff) < 0.05 else "#e74c3c"
 
-fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+html = f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Rapport Monitoring ML - Evidently AI</title>
+<style>
+  body {{ font-family: Arial, sans-serif; margin: 40px; background: #f5f6fa; color: #2d3436; }}
+  h1 {{ color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }}
+  h2 {{ color: #34495e; margin-top: 40px; }}
+  .badge {{ display:inline-block; padding:6px 16px; border-radius:20px; font-weight:bold; color:white; background:{drift_color}; font-size:1.1em; }}
+  .cards {{ display:flex; gap:20px; margin:20px 0; flex-wrap:wrap; }}
+  .card {{ background:white; border-radius:10px; padding:20px 30px; box-shadow:0 2px 8px rgba(0,0,0,0.08); min-width:180px; text-align:center; }}
+  .card .val {{ font-size:2em; font-weight:bold; color:#3498db; }}
+  .card .label {{ color:#7f8c8d; font-size:0.9em; margin-top:4px; }}
+  table {{ border-collapse:collapse; width:100%; background:white; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08); }}
+  th {{ background:#3498db; color:white; padding:12px 16px; text-align:left; }}
+  td {{ padding:10px 16px; border-bottom:1px solid #ecf0f1; }}
+  tr:last-child td {{ border-bottom:none; }}
+  tr:hover td {{ background:#f0f8ff; }}
+  .section {{ background:white; border-radius:10px; padding:24px; margin:20px 0; box-shadow:0 2px 8px rgba(0,0,0,0.08); }}
+  .diff {{ font-size:1.3em; font-weight:bold; color:{drift_color}; }}
+  footer {{ text-align:center; color:#b2bec3; margin-top:40px; font-size:0.85em; }}
+</style>
+</head>
+<body>
 
-# Graphique 1 : Distributions
-classes = label_encoder.classes_
-ref_counts = [( reference_df['type'] == cls).sum() for cls in classes]
-curr_counts = [(current_df['type'] == cls).sum() for cls in classes]
+<h1>📊 Rapport Monitoring ML — Evidently AI</h1>
+<p>Généré le : <strong>{datetime.now().strftime("%d/%m/%Y à %H:%M")}</strong></p>
 
-x = np.arange(len(classes))
-width = 0.35
+<div class="section">
+  <h2>🔍 Résultat du drift</h2>
+  <div class="cards">
+    <div class="card"><div class="val">{ref_acc:.1%}</div><div class="label">Accuracy — Référence</div></div>
+    <div class="card"><div class="val">{curr_acc:.1%}</div><div class="label">Accuracy — Actuel</div></div>
+    <div class="card"><div class="val diff">{diff:+.1%}</div><div class="label">Variation</div></div>
+    <div class="card"><div class="val">{len(reference_df)}</div><div class="label">Tickets référence</div></div>
+    <div class="card"><div class="val">{len(current_df)}</div><div class="label">Tickets actuels</div></div>
+  </div>
+  <p>Statut : <span class="badge">{status}</span></p>
+  <p style="color:#7f8c8d">Seuil de drift : 5% de variation d'accuracy</p>
+</div>
 
-axes[0].bar(x - width/2, ref_counts, width, label='Référence', alpha=0.8)
-axes[0].bar(x + width/2, curr_counts, width, label='Actuel', alpha=0.8)
-axes[0].set_xlabel('Classe')
-axes[0].set_ylabel('Nombre de tickets')
-axes[0].set_title('Distribution des Classes')
-axes[0].set_xticks(x)
-axes[0].set_xticklabels(classes, rotation=45)
-axes[0].legend()
-axes[0].grid(axis='y', alpha=0.3)
+<h2>📋 Période de référence (70% — {len(reference_df)} tickets)</h2>
+<table>
+  <tr><th>Classe</th><th>Tickets</th><th>%</th><th>Précision</th><th>Rappel</th><th>F1</th></tr>
+  {rows_ref}
+  <tr style="background:#eaf4fb"><td><strong>Global</strong></td><td><strong>{len(reference_df)}</strong></td><td><strong>100%</strong></td><td><strong>{ref_report['weighted avg']['precision']:.2f}</strong></td><td><strong>{ref_report['weighted avg']['recall']:.2f}</strong></td><td><strong>{ref_report['weighted avg']['f1-score']:.2f}</strong></td></tr>
+</table>
 
-# Graphique 2 : Accuracy
-axes[1].bar(['Référence', 'Actuel'], [ref_acc, curr_acc], 
-            color=['#2ecc71', '#3498db'], alpha=0.8)
-axes[1].set_ylabel('Accuracy')
-axes[1].set_title('Comparaison de Performance')
-axes[1].set_ylim([0, 1])
-axes[1].axhline(y=0.75, color='r', linestyle='--', label='Objectif (75%)')
-axes[1].legend()
-axes[1].grid(axis='y', alpha=0.3)
+<h2>📋 Période actuelle (30% — {len(current_df)} tickets)</h2>
+<table>
+  <tr><th>Classe</th><th>Tickets</th><th>%</th><th>Précision</th><th>Rappel</th><th>F1</th></tr>
+  {rows_curr}
+  <tr style="background:#eaf4fb"><td><strong>Global</strong></td><td><strong>{len(current_df)}</strong></td><td><strong>100%</strong></td><td><strong>{curr_report['weighted avg']['precision']:.2f}</strong></td><td><strong>{curr_report['weighted avg']['recall']:.2f}</strong></td><td><strong>{curr_report['weighted avg']['f1-score']:.2f}</strong></td></tr>
+</table>
 
-# Ajouter les valeurs sur les barres
-for i, v in enumerate([ref_acc, curr_acc]):
-    axes[1].text(i, v + 0.02, f'{v:.1%}', ha='center', va='bottom', fontweight='bold')
+<footer>Projet NLP Support Ticket Classifier — Monitoring avec Evidently AI</footer>
+</body>
+</html>"""
 
-plt.tight_layout()
-graph_path = reports_dir / 'monitoring_comparison.png'
-plt.savefig(graph_path, dpi=300, bbox_inches='tight')
-plt.close()
+html_path = reports_dir / 'monitoring_report.html'
+with open(html_path, 'w', encoding='utf-8') as f:
+    f.write(html)
+print(f"   ✓ Rapport HTML : {html_path}")
 
-print(f"   ✓ Graphique : {graph_path}")
-
-# ==========================================
-# 9. MÉTRIQUES JSON
-# ==========================================
-print("\n9. Sauvegarde des métriques...")
-
+# JSON aussi
 metrics = {
-    'reference': {
-        'n_samples': int(len(reference_df)),
-        'accuracy': float(ref_acc),
-        'distribution': {
-            cls: int((reference_df['type'] == cls).sum())
-            for cls in label_encoder.classes_
-        }
-    },
-    'current': {
-        'n_samples': int(len(current_df)),
-        'accuracy': float(curr_acc),
-        'distribution': {
-            cls: int((current_df['type'] == cls).sum())
-            for cls in label_encoder.classes_
-        }
-    },
-    'drift_analysis': {
-        'accuracy_difference': float(diff),
-        'status': drift_status,
-        'threshold': 0.05
-    }
+    'reference': {'n_samples': len(reference_df), 'accuracy': float(ref_acc), 'distribution': ref_dist},
+    'current':   {'n_samples': len(current_df),   'accuracy': float(curr_acc),'distribution': curr_dist},
+    'drift':     {'accuracy_difference': float(diff), 'status': status, 'threshold': 0.05}
 }
-
-metrics_path = reports_dir / 'monitoring_metrics.json'
-with open(metrics_path, 'w') as f:
+with open(reports_dir / 'monitoring_metrics.json', 'w') as f:
     json.dump(metrics, f, indent=2)
-
-print(f"   ✓ Métriques : {metrics_path}")
-
-# ==========================================
-# RÉSUMÉ
-# ==========================================
-print("\n" + "="*60)
-print("RÉSUMÉ")
-print("="*60)
-
-print(f"\n✓ Rapports générés dans : {reports_dir}")
-print(f"  • monitoring_report.txt")
-print(f"  • monitoring_comparison.png")
-print(f"  • monitoring_metrics.json")
-
-print(f"\n✓ Performance :")
-print(f"  Reference : {ref_acc:.1%}")
-print(f"  Current   : {curr_acc:.1%}")
-print(f"  Variation : {diff:+.1%}")
-
-print(f"\n✓ Statut : {drift_status}")
+print(f"   ✓ Métriques JSON : {reports_dir / 'monitoring_metrics.json'}")
 
 print("\n" + "="*60)
 print("✓ MONITORING TERMINÉ")
+print(f"  → Ouvre dans ton navigateur : {html_path}")
 print("="*60)

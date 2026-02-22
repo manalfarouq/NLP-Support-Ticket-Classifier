@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nlp-pipeline-job
+  labels:
+    app: nlp-classifier
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: nlp-pipeline
+          image: nlp-classifier:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "src/main.py"]
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          volumeMounts:
+            - name: data-volume
+              mountPath: /app/data
+            - name: models-volume
+              mountPath: /app/models
+            - name: reports-volume
+              mountPath: /app/reports
+      volumes:
+        - name: data-volume
+          emptyDir: {}
+        - name: models-volume
+          emptyDir: {}
+        - name: reports-volume
+          emptyDir: {}
+  backoffLimit: 2  # Nombre de tentatives en cas d'échec
