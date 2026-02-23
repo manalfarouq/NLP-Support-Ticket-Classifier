@@ -1,0 +1,27 @@
+{
+  "reference": {
+    "n_samples": 13998,
+    "accuracy": 0.9552078868409772,
+    "distribution": {
+      "Change": 1477,
+      "Incident": 5543,
+      "Problem": 2889,
+      "Request": 4089
+    }
+  },
+  "current": {
+    "n_samples": 6000,
+    "accuracy": 0.953,
+    "distribution": {
+      "Change": 598,
+      "Incident": 2434,
+      "Problem": 1295,
+      "Request": 1673
+    }
+  },
+  "drift": {
+    "accuracy_difference": -0.00220788684097728,
+    "status": "STABLE \u2705",
+    "threshold": 0.05
+  }
+}
